@@ -536,13 +536,21 @@ function showInventoryMessage(message) {
     messageEl.style.transform = 'translate(-50%, -50%)';
     messageEl.style.background = '#333';
     messageEl.style.color = '#fff';
-    messageEl.style.padding = '10px 20px';
-    messageEl.style.borderRadius = '5px';
+    messageEl.style.padding = '15px 25px';
+    messageEl.style.borderRadius = '8px';
     messageEl.style.zIndex = '1000';
+    messageEl.style.cursor = 'pointer';
+    messageEl.style.fontSize = '18px';
+    messageEl.style.boxShadow = '0 4px 15px rgba(0,0,0,0.5)';
+    messageEl.addEventListener('click', () => {
+        messageEl.remove();
+    });
     document.body.appendChild(messageEl);
     setTimeout(() => {
-        messageEl.remove();
-    }, 2000);
+        if (messageEl.parentNode) {
+            messageEl.remove();
+        }
+    }, 3000);
 }
 
 function openShop() {
@@ -578,7 +586,7 @@ function closeShop() {
 function buyItem(item) {
     if (coins < item.price) return;
     if (inventory.length >= 12) {
-        showResult('背包已满', '背包空间不足！');
+        showInventoryMessage('背包已满！');
         return;
     }
     
@@ -586,7 +594,7 @@ function buyItem(item) {
     inventory.push(item);
     updateUI();
     renderShop();
-    showResult('购买成功', `购买了 ${item.emoji} ${item.name}`);
+    showInventoryMessage(`购买了 ${item.emoji} ${item.name}`);
 }
 
 function renderShop() {
