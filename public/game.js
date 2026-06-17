@@ -484,6 +484,42 @@ function showLevelSelect() {
 
 function closeLevelSelect() {
     document.getElementById('levelSelect').classList.add('hidden');
+    if (gameState === 'menu') {
+        document.getElementById('menuScreen').classList.remove('hidden');
+    }
+}
+
+let currentLuckyBlock = null;
+
+function confirmLuckyBlock() {
+    if (!currentLuckyBlock) return;
+    if (coins < 50) {
+        showInventoryMessage('金币不足！');
+        return;
+    }
+    
+    coins -= 50;
+    updateUI();
+    document.getElementById('luckyBlockModal').classList.add('hidden');
+    
+    const block = currentLuckyBlock;
+    currentLuckyBlock = null;
+    
+    const rand = Math.random();
+    if (rand < 0.8) {
+        const rewardCoins = Math.floor(Math.random() * 30) + 10;
+        coins += rewardCoins;
+        updateUI();
+        showInventoryMessage(`🎉 获得 ${rewardCoins} 金币！`);
+    } else {
+        spawnEnemy();
+        showInventoryMessage('⚠️ 刷出了敌人！');
+    }
+}
+
+function cancelLuckyBlock() {
+    document.getElementById('luckyBlockModal').classList.add('hidden');
+    currentLuckyBlock = null;
 }
 
 function openInventory() {
