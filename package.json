@@ -1,0 +1,17 @@
+{
+  "name": "pixel-rpg-game",
+  "version": "1.0.0",
+  "description": "Pixel style 2D RPG game with combat and exploration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.22.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
