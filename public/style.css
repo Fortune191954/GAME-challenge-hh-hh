@@ -492,3 +492,54 @@ body {
 .mobile-btn.item-btn {
     background: rgba(255, 152, 0, 0.7);
 }
+
+/* Page styles */
+.page-header {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border-bottom: 2px solid #4a4a6a;
+    gap: 20px;
+}
+
+.page-header h2 {
+    color: #ffd700;
+    font-size: 24px;
+    text-shadow: 2px 2px 0 #000;
+    flex: 1;
+    text-align: center;
+}
+
+.back-btn {
+    background: rgba(74, 74, 106, 0.8);
+    border: 2px solid #ffd700;
+    color: #ffd700;
+    padding: 8px 15px;
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 #000;
+    transition: all 0.1s ease;
+    white-space: nowrap;
+}
+
+.back-btn:hover {
+    background: rgba(255, 215, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+.back-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 0 0 #000;
+}
+
+.page-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+}

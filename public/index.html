@@ -19,6 +19,40 @@
         </div>
     </div>
 
+    <div id="levelSelect" class="screen hidden">
+        <div class="page-header">
+            <button class="back-btn" onclick="closeLevelSelect()">⬅️ 返回</button>
+            <h2>选择关卡</h2>
+        </div>
+        <div class="page-content">
+            <div class="level-grid">
+                <button class="level-btn" onclick="startGameFromMenu(1)">🌲 森林</button>
+                <button class="level-btn" onclick="startGameFromMenu(2)">🌌 太空</button>
+                <button class="level-btn" onclick="startGameFromMenu(3)">🏰 地牢</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="inventoryPage" class="screen hidden">
+        <div class="page-header">
+            <button class="back-btn" onclick="closeInventory()">⬅️ 返回</button>
+            <h2>背包</h2>
+        </div>
+        <div class="page-content">
+            <div id="inventoryItems" class="inventory-grid"></div>
+        </div>
+    </div>
+
+    <div id="shopPage" class="screen hidden">
+        <div class="page-header">
+            <button class="back-btn" onclick="closeShop()">⬅️ 返回</button>
+            <h2>商店</h2>
+        </div>
+        <div class="page-content">
+            <div id="shopItems" class="shop-grid"></div>
+        </div>
+    </div>
+
     <div id="gameScreen" class="screen hidden">
         <div class="game-header">
             <div class="player-info">
@@ -68,34 +102,6 @@
             <div class="action-buttons desktop-only">
                 <button class="action-btn attack" onclick="playerAttack()">攻击</button>
                 <button class="action-btn item" onclick="openInventory()">道具</button>
-            </div>
-        </div>
-        
-        <div id="inventory" class="modal hidden">
-            <div class="modal-content">
-                <h3>背包</h3>
-                <div id="inventoryItems" class="inventory-grid"></div>
-                <button class="pixel-btn small" onclick="closeInventory()">⬅️ 返回</button>
-            </div>
-        </div>
-        
-        <div id="shop" class="modal hidden">
-            <div class="modal-content">
-                <h3>商店</h3>
-                <div id="shopItems" class="shop-grid"></div>
-                <button class="pixel-btn small" onclick="closeShop()">⬅️ 返回</button>
-            </div>
-        </div>
-        
-        <div id="levelSelect" class="modal hidden">
-            <div class="modal-content">
-                <h3>选择关卡</h3>
-                <div class="level-grid">
-                    <button class="level-btn" onclick="startGameFromMenu(1)">🌲 森林</button>
-                    <button class="level-btn" onclick="startGameFromMenu(2)">🌌 太空</button>
-                    <button class="level-btn" onclick="startGameFromMenu(3)">🏰 地牢</button>
-                </div>
-                <button class="pixel-btn small" onclick="closeLevelSelect()">⬅️ 返回主菜单</button>
             </div>
         </div>
         

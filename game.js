@@ -28,6 +28,8 @@ let joystickActive = false;
 let joystickAngle = 0;
 let joystickDistance = 0;
 
+let previousPage = 'menu';
+
 let backgroundLayers = {
     space: { sky: null, mountains: null, foreground: null },
     forest: { sky: null, mountains: null, foreground: null, background: null },
@@ -479,12 +481,14 @@ function handleResultClose() {
 }
 
 function showLevelSelect() {
+    previousPage = 'menu';
+    document.getElementById('menuScreen').classList.add('hidden');
     document.getElementById('levelSelect').classList.remove('hidden');
 }
 
 function closeLevelSelect() {
     document.getElementById('levelSelect').classList.add('hidden');
-    if (gameState === 'menu') {
+    if (previousPage === 'menu') {
         document.getElementById('menuScreen').classList.remove('hidden');
     }
 }
@@ -534,17 +538,18 @@ function openInventory() {
         grid.appendChild(div);
     });
     
-    document.getElementById('inventory').classList.remove('hidden');
+    document.getElementById('inventoryPage').classList.remove('hidden');
 }
 
 function openInventoryFromMenu() {
-    openInventory();
+    previousPage = 'menu';
     document.getElementById('menuScreen').classList.add('hidden');
+    openInventory();
 }
 
 function closeInventory() {
-    document.getElementById('inventory').classList.add('hidden');
-    if (gameState === 'menu') {
+    document.getElementById('inventoryPage').classList.add('hidden');
+    if (previousPage === 'menu') {
         document.getElementById('menuScreen').classList.remove('hidden');
     }
 }
@@ -590,6 +595,7 @@ function showInventoryMessage(message) {
 }
 
 function openShop() {
+    previousPage = 'menu';
     const grid = document.getElementById('shopItems');
     grid.innerHTML = '';
     
@@ -609,12 +615,13 @@ function openShop() {
         grid.appendChild(div);
     });
     
-    document.getElementById('shop').classList.remove('hidden');
+    document.getElementById('menuScreen').classList.add('hidden');
+    document.getElementById('shopPage').classList.remove('hidden');
 }
 
 function closeShop() {
-    document.getElementById('shop').classList.add('hidden');
-    if (gameState === 'menu') {
+    document.getElementById('shopPage').classList.add('hidden');
+    if (previousPage === 'menu') {
         document.getElementById('menuScreen').classList.remove('hidden');
     }
 }
