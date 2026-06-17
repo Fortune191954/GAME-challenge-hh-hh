@@ -11,8 +11,7 @@
         <div class="menu-content">
             <h1 class="game-title">像素冒险</h1>
             <div class="menu-buttons">
-                <button class="pixel-btn menu-btn" onclick="startGameFromMenu(1)">🎮 开始游戏</button>
-                <button class="pixel-btn menu-btn" onclick="showLevelSelect()">📊 选择关卡</button>
+                <button class="pixel-btn menu-btn" onclick="showLevelSelect()">🎮 开始游戏</button>
                 <button class="pixel-btn menu-btn" onclick="openInventoryFromMenu()">🎒 背包</button>
                 <button class="pixel-btn menu-btn" onclick="openShop()">🏪 商店</button>
                 <button class="pixel-btn menu-btn cancel" onclick="exitGame()">🚪 退出</button>
@@ -76,7 +75,7 @@
             <div class="modal-content">
                 <h3>背包</h3>
                 <div id="inventoryItems" class="inventory-grid"></div>
-                <button class="pixel-btn small" onclick="closeInventory()">关闭</button>
+                <button class="pixel-btn small" onclick="closeInventory()">⬅️ 返回</button>
             </div>
         </div>
         
@@ -84,7 +83,7 @@
             <div class="modal-content">
                 <h3>商店</h3>
                 <div id="shopItems" class="shop-grid"></div>
-                <button class="pixel-btn small" onclick="closeShop()">关闭</button>
+                <button class="pixel-btn small" onclick="closeShop()">⬅️ 返回</button>
             </div>
         </div>
         
@@ -96,7 +95,7 @@
                     <button class="level-btn" onclick="startGameFromMenu(2)">🌌 太空</button>
                     <button class="level-btn" onclick="startGameFromMenu(3)">🏰 地牢</button>
                 </div>
-                <button class="pixel-btn small" onclick="closeLevelSelect()">返回</button>
+                <button class="pixel-btn small" onclick="closeLevelSelect()">⬅️ 返回主菜单</button>
             </div>
         </div>
         

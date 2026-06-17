@@ -24,6 +24,10 @@ const spawnInterval = 1000;
 
 let keys = { a: false, d: false };
 
+let joystickActive = false;
+let joystickAngle = 0;
+let joystickDistance = 0;
+
 let backgroundLayers = {
     space: { sky: null, mountains: null, foreground: null },
     forest: { sky: null, mountains: null, foreground: null, background: null },
@@ -135,6 +139,7 @@ function initGame() {
     inventory = [items[0], items[0], items[1]];
     
     initKeyboard();
+    initJoystick();
     
     console.log('游戏初始化完成');
 }
@@ -192,11 +197,27 @@ function gameLoop() {
 
 function update() {
     let moveDistance = 0;
+    
     if (keys.d) {
         moveDistance = playerSpeed;
     } else if (keys.a) {
         moveDistance = -playerSpeed * 0.5;
     }
+    
+    if (joystickActive && joystickDistance > 10) {
+        const speed = playerSpeed * (joystickDistance / 35);
+        if (joystickAngle > -Math.PI/4 && joystickAngle < Math.PI/4) {
+            moveDistance += speed;
+        } else if (joystickAngle > Math.PI/4 && joystickAngle < 3*Math.PI/4) {
+            playerY -= speed * 0.7;
+        } else if (joystickAngle < -Math.PI/4 && joystickAngle > -3*Math.PI/4) {
+            playerY += speed * 0.7;
+        } else {
+            moveDistance -= speed * 0.5;
+        }
+    }
+    
+    playerY = Math.max(150, Math.min(canvas.height - 100, playerY));
     
     cameraX += moveDistance;
     
@@ -501,8 +522,27 @@ function useItem(index) {
         }
         inventory.splice(index, 1);
         openInventory();
-        showResult('使用成功', `使用了 ${item.emoji} ${item.name}`);
+        showInventoryMessage(`使用了 ${item.emoji} ${item.name}`);
     }
+}
+
+function showInventoryMessage(message) {
+    const messageEl = document.createElement('div');
+    messageEl.className = 'inventory-message';
+    messageEl.textContent = message;
+    messageEl.style.position = 'fixed';
+    messageEl.style.top = '50%';
+    messageEl.style.left = '50%';
+    messageEl.style.transform = 'translate(-50%, -50%)';
+    messageEl.style.background = '#333';
+    messageEl.style.color = '#fff';
+    messageEl.style.padding = '10px 20px';
+    messageEl.style.borderRadius = '5px';
+    messageEl.style.zIndex = '1000';
+    document.body.appendChild(messageEl);
+    setTimeout(() => {
+        messageEl.remove();
+    }, 2000);
 }
 
 function openShop() {
@@ -530,6 +570,9 @@ function openShop() {
 
 function closeShop() {
     document.getElementById('shop').classList.add('hidden');
+    if (gameState === 'menu') {
+        document.getElementById('menuScreen').classList.remove('hidden');
+    }
 }
 
 function buyItem(item) {
@@ -576,6 +619,66 @@ function exitGame() {
 function initKeyboard() {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
+}
+
+function initJoystick() {
+    const container = document.getElementById('joystickContainer');
+    const knob = document.getElementById('joystickKnob');
+    if (!container || !knob) return;
+    
+    const baseRect = container.getBoundingClientRect();
+    const centerX = baseRect.width / 2;
+    const centerY = baseRect.height / 2;
+    const maxDistance = Math.min(centerX, centerY) - 10;
+    
+    function updateJoystick(clientX, clientY) {
+        const x = clientX - baseRect.left - centerX;
+        const y = clientY - baseRect.top - centerY;
+        
+        joystickAngle = Math.atan2(y, x);
+        joystickDistance = Math.min(Math.sqrt(x * x + y * y), maxDistance);
+        
+        if (joystickDistance > 5) {
+            joystickActive = true;
+            const knobX = Math.cos(joystickAngle) * joystickDistance;
+            const knobY = Math.sin(joystickAngle) * joystickDistance;
+            knob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+        }
+    }
+    
+    function resetJoystick() {
+        joystickActive = false;
+        joystickDistance = 0;
+        knob.style.transform = 'translate(0, 0)';
+    }
+    
+    container.addEventListener('mousedown', (e) => {
+        updateJoystick(e.clientX, e.clientY);
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (joystickActive) {
+            updateJoystick(e.clientX, e.clientY);
+        }
+    });
+    
+    document.addEventListener('mouseup', resetJoystick);
+    
+    container.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        updateJoystick(touch.clientX, touch.clientY);
+        e.preventDefault();
+    });
+    
+    document.addEventListener('touchmove', (e) => {
+        if (joystickActive) {
+            const touch = e.touches[0];
+            updateJoystick(touch.clientX, touch.clientY);
+        }
+        e.preventDefault();
+    });
+    
+    document.addEventListener('touchend', resetJoystick);
 }
 
 function handleKeyDown(e) {
