@@ -8,7 +8,19 @@ const PORT = process.env.PORT || 3001;
 const users = {};
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// 游戏代码现在只有一份，就在仓库根目录（GitHub Pages 部署的也是这一份）。
+// 直接托管根目录，但要挡掉开发文件，避免把 node_modules、源码、日志暴露到浏览器。
+const BLOCKED_PATHS = /^\/(?:node_modules|\.git|image|test-api\.js|test-game\.js|server\.js|package(?:-lock)?\.json|convert-to-png\.js|generate-backgrounds\.js|[^/]*\.md)\b/i;
+
+app.use((req, res, next) => {
+  if (BLOCKED_PATHS.test(req.path)) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  next();
+});
+
+app.use(express.static(__dirname, { dotfiles: 'deny', index: 'index.html' }));
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -124,7 +136,7 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/api/health', (req, res) => {

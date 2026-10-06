@@ -24,10 +24,23 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
+    z-index: 10;
 }
 
 .screen.hidden {
     display: none;
+}
+
+#inventoryPage {
+    z-index: 1000;
+}
+
+#shopPage {
+    z-index: 1000;
+}
+
+#levelSelect {
+    z-index: 20;
 }
 
 .menu-content {
@@ -128,24 +141,26 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 10px;
+    padding: 0;
     overflow: hidden;
+    position: relative;
 }
 
 #gameCanvas {
-    border: 4px solid #4a4a6a;
-    box-shadow: 0 0 0 4px #1a1a2e, 8px 8px 0 #0f0f1a;
+    border: none;
+    box-shadow: none;
     background: #3d3d5c;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    user-select: none;
 }
 
 .game-ui {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    padding: 15px;
+    padding: 15px 25px;
     gap: 30px;
     background: #2d2d44;
     border-top: 2px solid #4a4a6a;
@@ -180,9 +195,13 @@ body {
     background: linear-gradient(90deg, #ef5350, #e53935);
 }
 
+.bar-fill.stamina {
+    background: linear-gradient(90deg, #42a5f5, #1e88e5);
+}
+
 .action-buttons {
     display: flex;
-    gap: 15px;
+    gap: 30px;
 }
 
 .action-btn {
@@ -205,6 +224,12 @@ body {
 .action-btn.item {
     background: #FF9800;
     border-color: #E65100;
+    color: #fff;
+}
+
+.action-btn.skill {
+    background: #7e57c2;
+    border-color: #5e35b1;
     color: #fff;
 }
 
@@ -373,14 +398,15 @@ body {
 }
 
 .mobile-controls {
-    position: absolute;
-    bottom: 10px;
+    position: fixed;
+    bottom: 100px;
     left: 10px;
     right: 10px;
     display: none;
     justify-content: space-between;
     align-items: flex-end;
     pointer-events: none;
+    z-index: 100;
 }
 
 @media (max-width: 768px) {
@@ -542,4 +568,120 @@ body {
     justify-content: center;
     padding: 20px;
     overflow-y: auto;
+}
+
+/* 局内快速背包 - 半圆形展开 */
+.quick-inventory {
+    position: fixed;
+    left: calc(50% + 70px);
+    bottom: 70px;
+    width: 0;
+    height: 0;
+    z-index: 500;
+    pointer-events: none;
+}
+
+.quick-inventory.hidden {
+    display: none;
+}
+
+.quick-item {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    background: #2d2d44;
+    border: 2px solid #4a4a6a;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.2s ease;
+    font-size: 24px;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+}
+
+.quick-inventory:not(.hidden) .quick-item {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+}
+
+.quick-item:hover {
+    background: #3d3d5c;
+    border-color: #ffd700;
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.quick-item span {
+    font-size: 10px;
+    color: #fff;
+    margin-top: 2px;
+}
+
+.quick-item .item-emoji {
+    font-size: 24px;
+    line-height: 1;
+}
+
+/* ---- 属性显示 / 技能按钮 / 已装备标记 ---- */
+
+.attack-info, .defense-info {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+}
+
+.mobile-btn.skill-btn {
+    background: rgba(126, 87, 194, 0.7);
+}
+
+.inventory-item {
+    position: relative;
+}
+
+.inventory-item.equipped {
+    border-color: #ffd700;
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.35);
+}
+
+.inventory-item .equipped-badge {
+    position: absolute;
+    bottom: -7px;
+    font-size: 9px;
+    color: #1a1a2e;
+    background: #ffd700;
+    padding: 0 3px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.quick-item.equipped {
+    border-color: #ffd700;
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.35);
+}
+
+.quick-item .equipped-mark {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    margin-top: 0;
+    border-radius: 50%;
+    background: #ffd700;
+    color: #1a1a2e;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .attack-info, .defense-info {
+        margin-right: 8px;
+    }
 }

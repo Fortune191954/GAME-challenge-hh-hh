@@ -2,20 +2,20 @@
 
 ## 背景图片位置
 
-所有背景图片位于: `public/assets/backgrounds/[theme]/`
+所有背景图片位于: `assets/backgrounds/[theme]/`
 
 ## 三种主题
 
 ### 1. 太空主题 (space)
-- **位置**: `public/assets/backgrounds/space/`
+- **位置**: `assets/backgrounds/space/`
 - **特点**: 深蓝色太空，闪烁星星，漂浮小行星
 
 ### 2. 森林主题 (forest)
-- **位置**: `public/assets/backgrounds/forest/`
+- **位置**: `assets/backgrounds/forest/`
 - **特点**: 淡蓝色天空，白云飘浮，翠绿草地和树木
 
 ### 3. 地牢主题 (dungeon)
-- **位置**: `public/assets/backgrounds/dungeon/`
+- **位置**: `assets/backgrounds/dungeon/`
 - **特点**: 暗色调，废墟和岩石
 
 ## 每种主题包含的图片

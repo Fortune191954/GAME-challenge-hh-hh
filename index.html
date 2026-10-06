@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>像素冒险RPG</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -71,6 +71,14 @@
                 <span class="label">关卡:</span>
                 <span id="level" class="value">1</span>
             </div>
+            <div class="attack-info">
+                <span class="label">攻击:</span>
+                <span id="attack" class="value">15</span>
+            </div>
+            <div class="defense-info">
+                <span class="label">防御:</span>
+                <span id="defense" class="value">0</span>
+            </div>
             <button class="pixel-btn small" onclick="pauseGame()">⏸️ 暂停</button>
         </div>
         
@@ -85,6 +93,7 @@
                 
                 <div class="mobile-action-buttons">
                     <button class="mobile-btn attack-btn" onclick="playerAttack()">⚔️</button>
+                    <button class="mobile-btn skill-btn" onclick="playerSkill()">✨</button>
                     <button class="mobile-btn item-btn" onclick="openInventory()">🎒</button>
                 </div>
             </div>
@@ -99,8 +108,17 @@
                 <span id="healthText">100/100</span>
             </div>
             
+            <div class="health-bar">
+                <div class="bar-label">SP</div>
+                <div class="bar-container">
+                    <div id="staminaBar" class="bar-fill stamina"></div>
+                </div>
+                <span id="staminaText">100/100</span>
+            </div>
+            
             <div class="action-buttons desktop-only">
                 <button class="action-btn attack" onclick="playerAttack()">攻击</button>
+                <button class="action-btn skill" onclick="playerSkill()">技能 30SP</button>
                 <button class="action-btn item" onclick="openInventory()">道具</button>
             </div>
         </div>
@@ -145,6 +163,9 @@
                 <button class="pixel-btn" onclick="handleResultClose()">确定</button>
             </div>
         </div>
+        
+        <!-- 局内快速背包（半圆形展开） -->
+        <div id="quickInventory" class="quick-inventory hidden"></div>
     </div>
 
     <script src="game.js"></script>

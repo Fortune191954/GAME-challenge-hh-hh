@@ -339,7 +339,7 @@ themes.forEach(theme => {
 });
 
 console.log('所有背景图片生成完成!');
-console.log('图片位置: public/assets/backgrounds/[theme]/');
+console.log('图片位置: assets/backgrounds/[theme]/');
 console.log('\n每种主题包含:');
 console.log('  - sky.png: 天空层（云朵/星星）');
 console.log('  - mountains.png: 远景山脉层');

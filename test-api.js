@@ -7,7 +7,7 @@ function testAPI() {
     
     const registerOptions = {
         hostname: 'localhost',
-        port: 3000,
+        port: 3001,
         path: '/api/register',
         method: 'POST',
         headers: {
@@ -28,7 +28,7 @@ function testAPI() {
             
             const loginOptions = {
                 hostname: 'localhost',
-                port: 3000,
+                port: 3001,
                 path: '/api/login',
                 method: 'POST',
                 headers: {
