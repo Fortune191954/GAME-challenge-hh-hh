@@ -18,16 +18,40 @@ const vm = require('vm');
 
 // ---------------------------------------------------------------- DOM 桩件
 
-const CTX_CONTEXT_STUB = new Proxy({}, {
-    get(target, key) {
-        if (key in target) return target[key];
-        return () => {};
-    },
-    set(target, key, value) {
-        target[key] = value;
-        return true;
-    }
-});
+// 按浏览器语义模拟 2D 上下文：关键点是 drawImage —— 9 参数形式下，
+// 如果源矩形宽或高为 0（图片 404 时就是这种情况），浏览器会抛 IndexSizeError，
+// 这个异常正是"没有背景也没有人物、循环停摆"的元凶，桩件必须能复现它。
+function createCtxStub() {
+    return {
+        drawnImages: 0,
+        filledRects: 0,
+        texts: [],
+        fillStyle: '#000',
+        font: '10px sans-serif',
+        globalAlpha: 1,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'low',
+        setTransform() { },
+        scale() { },
+        beginPath() { },
+        arc() { },
+        fill() { },
+        fillRect() { this.filledRects++; },
+        fillText(text) { this.texts.push(String(text)); },
+        drawImage(img, ...args) {
+            if (args.length === 8) {
+                const [, , sw, sh] = args;
+                if (sw === 0 || sh === 0) {
+                    const err = new Error("Failed to execute 'drawImage': The source width or height is zero.");
+                    err.name = 'IndexSizeError';
+                    throw err;
+                }
+            }
+            if (img && (img.naturalWidth || img.width) === 0) return; // 解码失败：静默返回
+            this.drawnImages++;
+        }
+    };
+}
 
 class El {
     constructor(id = '') {
@@ -57,16 +81,30 @@ class El {
     getBoundingClientRect() { return { left: 100, top: 100, width: 100, height: 100, right: 200, bottom: 200 }; }
     querySelector() { return null; }
     querySelectorAll() { return []; }
-    getContext() { return CTX_CONTEXT_STUB; }
+    getContext() { return createCtxStub(); }
     isVisible() { return !this._classes.has('hidden'); }
 }
 
 class ImageStub {
-    constructor() { this.width = 1920; this.height = 720; this.complete = false; this._src = ''; }
+    constructor(fail = false) {
+        this._fail = fail;
+        // 加载失败的图片：complete 仍然是 true，但尺寸为 0
+        // —— 这正是最容易让 drawImage 抛异常、把渲染循环打死的情况
+        this.width = fail ? 0 : 1920;
+        this.height = fail ? 0 : 720;
+        this.naturalWidth = this.width;
+        this.naturalHeight = this.height;
+        this.complete = false;
+        this._src = '';
+    }
     set src(value) {
         this._src = value;
         this.complete = true;
-        if (typeof this.onload === 'function') this.onload();
+        if (this._fail) {
+            if (typeof this.onerror === 'function') this.onerror();
+        } else if (typeof this.onload === 'function') {
+            this.onload();
+        }
     }
     get src() { return this._src; }
 }
@@ -126,10 +164,12 @@ globalThis.__giveItem = id => {
 };
 `;
 
-function createHarness(gamePath) {
+function createHarness(gamePath, options = {}) {
     const source = fs.readFileSync(gamePath, 'utf8');
     const elements = new Map();
+    const brokenIds = new Set();
     const getEl = id => {
+        if (brokenIds.has(id)) return null; // 模拟元素不存在
         if (!elements.has(id)) elements.set(id, new El(id));
         return elements.get(id);
     };
@@ -138,6 +178,8 @@ function createHarness(gamePath) {
     // index.html 里 canvas 声明为 width="800" height="400"，根目录版本直接用 canvas.width
     canvas.width = 800;
     canvas.height = 400;
+    const ctxStub = createCtxStub();
+    canvas.getContext = () => ctxStub; // 整个测试共用一个上下文，方便断言"画了什么"
     canvas.parentElement = getEl('gameContainer');
     // 还原 index.html 中带 class="... hidden" 的元素初始状态
     ['levelSelect', 'inventoryPage', 'shopPage', 'gameScreen', 'luckyBlockModal',
@@ -175,7 +217,7 @@ function createHarness(gamePath) {
         },
         document: documentStub,
         window: windowStub,
-        Image: ImageStub,
+        Image: class extends ImageStub { constructor() { super(!!options.imagesFail); } },
         confirm: () => true,
         requestAnimationFrame: cb => { pendingFrame = cb; return 1; },
         cancelAnimationFrame: () => { pendingFrame = null; },
@@ -191,11 +233,13 @@ function createHarness(gamePath) {
         sandbox,
         getEl,
         canvas,
+        ctx: ctxStub,
         window: windowStub,
         document: documentStub,
         logs,
         peek: () => sandbox.__peek(),
         evalIn: code => vm.runInContext(code, context),
+        breakElement(id) { brokenIds.add(id); },
         boot() { documentStub.dispatch('DOMContentLoaded', {}); },
         flushTimers() {
             const due = timers.splice(0, timers.length);
@@ -301,6 +345,11 @@ function runSuite(gamePath) {
         h.step(60);
         assert(h.peek().enemyCount > 0, '刷出的敌人被剔除线误删（生成点越界）');
         assert(h.peek().gameRunning === true, '60 帧后游戏停止了');
+    });
+
+    check('图片正常时背景与角色都会被绘制', () => {
+        assert(h.ctx.drawnImages > 0, '背景图没有被绘制出来');
+        assert(h.ctx.texts.includes('🧙'), '角色没有被绘制出来');
     });
 
     // --- 4. 攻击 -> 击杀 -> 计分掉金币
@@ -560,6 +609,79 @@ function runSuite(gamePath) {
     });
 }
 
+// ---------------------------------------------------------------- 容错测试
+// "整局黑屏、没有背景也没有人物、地图进不去" 最常见的原因有两个：
+//   1) 背景图 404，drawImage 抛异常把 requestAnimationFrame 循环打死
+//   2) 浏览器缓存了旧版 index.html，新 game.js 拿不到新元素而崩在开局
+// 这两条单独跑一遍，确保无论资源怎么丢，游戏都不会变成一块死画面。
+
+function runResilienceSuite(gamePath) {
+    const label = path.relative(process.cwd(), path.resolve(gamePath));
+    results.push({ name: `===== ${label}（资源 404 / DOM 不一致） =====`, status: 'HEAD' });
+
+    // 场景 1：所有背景图都加载失败
+    const h = createHarness(gamePath, { imagesFail: true });
+    const { sandbox } = h;
+
+    check('背景图全部 404 时仍能进入关卡并持续渲染', () => {
+        h.boot();
+        sandbox.startGameFromMenu(1);
+        h.flushTimers();
+        assert(h.peek().gameRunning === true, 'gameRunning 不是 true');
+        h.step(90);
+        assert(h.peek().gameRunning === true, '渲染循环被异常打断（循环停摆）');
+        const errors = h.logs.filter(([level]) => level === 'error');
+        assert(errors.length === 0, '循环里抛出了异常: ' + JSON.stringify(errors));
+        // 最关键的一条：人物必须真的被画出来（旧代码会在这里挂掉，
+        // 因为 render() 早早抛异常，根本走不到画角色的那一步）
+        assert(h.ctx.texts.includes('🧙'), '角色没有被绘制出来，画面是空的');
+        assert(h.ctx.drawnImages === 0, `不该去画加载失败的图片: ${h.ctx.drawnImages}`);
+    });
+
+    check('背景图全部 404 时仍能移动和攻击', () => {
+        const before = h.peek().cameraX;
+        sandbox.__setKeys({ a: false, d: true });
+        h.step(30);
+        assert(h.peek().cameraX > before, '角色无法移动');
+        sandbox.playerAttack();
+        assert(h.peek().projectileCount > 0, '无法攻击');
+        sandbox.__setKeys({ a: false, d: false });
+    });
+
+    check('背景图加载失败时给出明确提示', () => {
+        const warns = h.logs.filter(([level]) => level === 'warn');
+        assert(warns.length > 0, '没有提示背景加载失败');
+        assert(warns.some(([, text]) => /assets\/backgrounds/.test(text)),
+            '提示里没有指出期望路径: ' + JSON.stringify(warns.slice(0, 2)));
+    });
+
+    // 场景 2：HUD 元素缺失（浏览器缓存了旧版 index.html）
+    const h2 = createHarness(gamePath);
+    const sandbox2 = h2.sandbox;
+
+    check('缺少 HUD 元素时不会崩在开局', () => {
+        ['staminaBar', 'staminaText', 'attack', 'defense', 'healthBar', 'healthText', 'score']
+            .forEach(id => h2.breakElement(id));
+        h2.boot();
+        sandbox2.startGameFromMenu(1);
+        h2.flushTimers();
+        assert(h2.peek().gameRunning === true, '缺少元素导致 startGame 中断');
+        h2.step(30);
+        assert(h2.peek().gameRunning === true, '缺少元素导致循环停摆');
+        const errors = h2.logs.filter(([level]) => level === 'error');
+        assert(errors.length === 0, '缺少元素时抛异常: ' + JSON.stringify(errors));
+    });
+
+    check('缺少快速背包容器时点"道具"不报错', () => {
+        h2.breakElement('quickInventory');
+        sandbox2.openInventory();   // 局内点道具
+        h2.step(5);
+        assert(h2.peek().gameRunning === true, '点道具导致循环停摆');
+        const errors = h2.logs.filter(([level]) => level === 'error');
+        assert(errors.length === 0, '点道具时抛异常: ' + JSON.stringify(errors));
+    });
+}
+
 // ---------------------------------------------------------------- 入口
 
 const targets = process.argv.slice(2);
@@ -571,6 +693,7 @@ targets.forEach(target => {
         return;
     }
     runSuite(target);
+    runResilienceSuite(target);
 });
 
 let width = 0;

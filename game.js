@@ -105,6 +105,12 @@ const defensePerPoint = 0.05;          // 每 1 点防御减伤 5%
 const maxDamageReduction = 0.8;        // 减伤上限 80%
 
 
+// 图片是否真的可以安全绘制：complete === true 并不代表解码成功，
+// 加载失败（404）的图片同样是 complete === true，但尺寸为 0
+function isImageReady(img) {
+    return !!img && img.complete === true && (img.naturalWidth || img.width) > 0;
+}
+
 function loadBackgroundImages() {
     const themes = ['space', 'forest', 'dungeon'];
     const layers = ['sky', 'mountains', 'foreground'];
@@ -120,7 +126,7 @@ function loadBackgroundImages() {
                 checkLoaded();
             };
             img.onerror = () => {
-                console.log(`背景图片加载失败: ${theme}/${layer}, 将使用程序生成背景`);
+                console.warn(`背景图片加载失败: ${img.src}（检查 assets/backgrounds/ 下是否真的有这张图）`);
                 loadedCount++;
                 checkLoaded();
             };
@@ -137,7 +143,7 @@ function loadBackgroundImages() {
         checkLoaded();
     };
     forestBg.onerror = () => {
-        console.log('森林背景图片加载失败');
+        console.warn(`背景图片加载失败: ${forestBg.src}（检查 assets/backgrounds/forest/background.png）`);
         loadedCount++;
         checkLoaded();
     };
@@ -192,20 +198,32 @@ function initGame() {
 }
 
 function updateUI() {
-    document.getElementById('score').textContent = score;
-    document.getElementById('coins').textContent = coins;
-    document.getElementById('level').textContent = level;
+    setText('score', score);
+    setText('coins', coins);
+    setText('level', level);
     
     const healthPercent = (playerHealth / maxHealth) * 100;
-    document.getElementById('healthBar').style.width = healthPercent + '%';
-    document.getElementById('healthText').textContent = Math.ceil(playerHealth) + '/' + maxHealth;
+    setWidth('healthBar', healthPercent + '%');
+    setText('healthText', Math.ceil(playerHealth) + '/' + maxHealth);
     
     const staminaPercent = (playerStamina / maxStamina) * 100;
-    document.getElementById('staminaBar').style.width = staminaPercent + '%';
-    document.getElementById('staminaText').textContent = Math.floor(playerStamina) + '/' + maxStamina;
+    setWidth('staminaBar', staminaPercent + '%');
+    setText('staminaText', Math.floor(playerStamina) + '/' + maxStamina);
     
-    document.getElementById('attack').textContent = getAttackPower();
-    document.getElementById('defense').textContent = getDefense();
+    setText('attack', getAttackPower());
+    setText('defense', getDefense());
+}
+
+// 元素缺失时不要抛异常：浏览器缓存了旧版 index.html 时，
+// 新 game.js 会因为拿不到新元素而崩在开局，画面就是一片空白
+function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function setWidth(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.style.width = value;
 }
 
 function startGameFromMenu(levelNum) {
@@ -237,6 +255,7 @@ function startGame() {
     enemiesDefeated = 0;
     cameraX = 0;
     lastSpawnDistance = 0;
+    frameErrorReported = false;
     updateUI();
     
     resizeCanvas();
@@ -272,6 +291,8 @@ function resizeCanvas() {
     }
 }
 
+let frameErrorReported = false;
+
 function gameLoop() {
     if (!gameRunning) return;
     if (gamePaused) {
@@ -279,10 +300,36 @@ function gameLoop() {
         return;
     }
     
-    update();
-    render();
+    try {
+        update();
+        render();
+    } catch (err) {
+        // 单帧异常绝不能让循环停摆：一旦停摆，玩家看到的就是
+        // "没有背景也没有人物、地图进不去"，而且没有任何提示，极难排查
+        if (!frameErrorReported) {
+            frameErrorReported = true;
+            console.error('游戏循环出错：', err);
+            showGameError(err);
+        }
+    }
     
     requestAnimationFrame(gameLoop);
+}
+
+// 把错误直接画在画布上，比一片空白更容易定位问题
+function showGameError(err) {
+    if (!ctx || !canvas) return;
+    
+    const message = String((err && err.message) || err);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.fillStyle = '#ff5252';
+    ctx.font = '18px monospace';
+    ctx.fillText('⚠️ 游戏运行出错', 20, 40);
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px monospace';
+    ctx.fillText(message.slice(0, 70), 20, 70);
+    ctx.fillText('按 F12 打开 Console 查看完整堆栈', 20, 94);
 }
 
 function update() {
@@ -410,28 +457,39 @@ function render() {
     ctx.fillStyle = theme.bgColor;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     
-    if (currentTheme === 'forest' && backgroundLayers.forest.background && backgroundLayers.forest.background.complete) {
-        const bgImg = backgroundLayers.forest.background;
+    // 背景图只有真正解码成功才能画。用 404/损坏的图片去 drawImage，
+    // 在部分浏览器会抛 IndexSizeError，异常会把整个渲染循环打死 ——
+    // 表现就是"没有背景图也没有人物、地图进不去"，所以这里必须严格判断。
+    const layers = backgroundLayers[currentTheme];
+    const forestBg = backgroundLayers.forest.background;
+    let backgroundDrawn = false;
+    
+    if (currentTheme === 'forest' && isImageReady(forestBg)) {
         // 整张背景图直接填满整个画布，随画布尺寸缩放
-        ctx.drawImage(bgImg, 0, 0, bgImg.width, bgImg.height, 0, 0, canvasWidth, canvasHeight);
+        ctx.drawImage(forestBg, 0, 0, forestBg.naturalWidth, forestBg.naturalHeight, 0, 0, canvasWidth, canvasHeight);
+        backgroundDrawn = true;
     } else if (backgroundsLoaded) {
-        const layers = backgroundLayers[currentTheme];
-        
-        if (layers.sky && layers.sky.complete) {
+        if (isImageReady(layers.sky)) {
             ctx.drawImage(layers.sky, -cameraX * theme.parallaxSpeed.sky % 1920, 0, 1920, 720, 0, 0, canvasWidth, canvasHeight);
             ctx.drawImage(layers.sky, (1920 - cameraX * theme.parallaxSpeed.sky % 1920) % 1920, 0, 1920, 720, canvasWidth - (cameraX * theme.parallaxSpeed.sky % canvasWidth), 0, canvasWidth, canvasHeight);
+            backgroundDrawn = true;
         }
         
-        if (layers.mountains && layers.mountains.complete) {
+        if (isImageReady(layers.mountains)) {
             ctx.drawImage(layers.mountains, -cameraX * theme.parallaxSpeed.mountains % 1920, 0, 1920, 720, 0, 0, canvasWidth, canvasHeight);
             ctx.drawImage(layers.mountains, (1920 - cameraX * theme.parallaxSpeed.mountains % 1920) % 1920, 0, 1920, 720, canvasWidth - (cameraX * theme.parallaxSpeed.mountains % canvasWidth), 0, canvasWidth, canvasHeight);
+            backgroundDrawn = true;
         }
         
-        if (layers.foreground && layers.foreground.complete) {
+        if (isImageReady(layers.foreground)) {
             ctx.drawImage(layers.foreground, -cameraX * theme.parallaxSpeed.foreground % 1920, 0, 1920, 720, 0, 0, canvasWidth, canvasHeight);
             ctx.drawImage(layers.foreground, (1920 - cameraX * theme.parallaxSpeed.foreground % 1920) % 1920, 0, 1920, 720, canvasWidth - (cameraX * theme.parallaxSpeed.foreground % canvasWidth), 0, canvasWidth, canvasHeight);
+            backgroundDrawn = true;
         }
-    } else {
+    }
+    
+    // 一张背景都没画出来（图片缺失或加载失败）时，用程序生成的星空兜底
+    if (!backgroundDrawn) {
         for (let i = 0; i < 100; i++) {
             const x = (i * 50 - cameraX * 0.5) % canvasWidth;
             const y = (i * 30) % (canvasHeight - 100);
@@ -804,13 +862,26 @@ function cancelLuckyBlock() {
 function openInventory() {
     // 局内：显示半圆形快速背包，不暂停游戏
     if (gameRunning) {
+        const container = document.getElementById('quickInventory');
+        if (!container) {
+            // 浏览器缓存了旧版 index.html 时没有这个容器，退回整页背包，
+            // 至少别让"道具"按钮点了毫无反应
+            openInventoryPage();
+            return;
+        }
         renderQuickInventory();
-        document.getElementById('quickInventory').classList.toggle('hidden');
+        container.classList.toggle('hidden');
         return;
     }
     
-    // 菜单中：显示全屏背包页面
+    openInventoryPage();
+}
+
+// 整页背包（主菜单用）
+function openInventoryPage() {
     const grid = document.getElementById('inventoryItems');
+    if (!grid) return;
+    
     grid.innerHTML = '';
     
     inventory.forEach((item, index) => {
@@ -822,12 +893,15 @@ function openInventory() {
         grid.appendChild(div);
     });
     
-    document.getElementById('inventoryPage').classList.remove('hidden');
+    const page = document.getElementById('inventoryPage');
+    if (page) page.classList.remove('hidden');
 }
 
 // 渲染半圆形快速背包
 function renderQuickInventory() {
     const container = document.getElementById('quickInventory');
+    if (!container) return;
+    
     container.innerHTML = '';
     
     const itemCount = inventory.length;
@@ -873,7 +947,8 @@ function renderQuickInventory() {
 }
 
 function closeQuickInventory() {
-    document.getElementById('quickInventory').classList.add('hidden');
+    const container = document.getElementById('quickInventory');
+    if (container) container.classList.add('hidden');
 }
 
 function openInventoryFromMenu() {
